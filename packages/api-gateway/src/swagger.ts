@@ -43,7 +43,7 @@ All endpoints currently use API key authentication (to be implemented).
     ],
     securityDefinitions: {
       apiKey: {
-        type: 'apiKey' as 'apiKey',
+        type: 'apiKey' as const,
         name: 'x-api-key',
         in: 'header',
         description: 'API key for authentication (to be implemented)',
@@ -58,7 +58,7 @@ All endpoints currently use API key authentication (to be implemented).
 export const swaggerUiOptions = {
   routePrefix: '/documentation',
   uiConfig: {
-    docExpansion: 'list' as 'list',
+    docExpansion: 'list' as const,
     deepLinking: true,
     persistAuthorization: true,
   },

@@ -12,10 +12,10 @@ class MasterOrchestrator {
   private config: any;
 
   async connect(): Promise<void> {
-    console.log('Mock MasterOrchestrator connected');
+    // Simulate connection
   }
 
-  async processUserGoal(goal: string): Promise<string> {
+  async processUserGoal(_goal: string): Promise<string> {
     // In a real implementation, this would create a job and return a job ID
     return `mock-job-${Date.now()}`; 
   }
