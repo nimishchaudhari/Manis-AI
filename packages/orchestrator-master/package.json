@@ -14,7 +14,7 @@
     "@acme/shared-mcp": "workspace:*",
     "@acme/shared-utils": "workspace:*",
     "amqplib": "^0.10.3",
-    "uuid": "^9.0.1"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.3",
