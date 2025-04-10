@@ -23,7 +23,8 @@
     "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "echo \"No integration tests in this package\" && exit 0"
   },
   "dependencies": {
     "pino": "^9.2.0",
