@@ -95,7 +95,8 @@ export class WebSearchAgent extends AgentService {
     this.logger.info(`Performing search via Tool Manager: "${query}"`);
     
     try {
-      const result = await this.executeTool('mock_api', {
+      // Unused variable renamed to _result to satisfy linter
+      const _result = await this.executeTool('mock_api', {
         endpoint: `/search?q=${encodeURIComponent(query)}`,
         method: 'GET'
       });

@@ -80,7 +80,7 @@ mockApiBreaker.on('halfOpen', () => {
   logger.info('Mock API circuit breaker half-open');
 });
 
-mockApiBreaker.on('fallback', (result) => {
+mockApiBreaker.on('fallback', (_result) => {
   logger.warn('Mock API request failed, falling back');
 });
 

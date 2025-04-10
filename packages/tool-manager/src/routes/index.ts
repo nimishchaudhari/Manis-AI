@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import toolRoutes from './tools.js';
 
-const routes: FastifyPluginAsync = async (fastify, options) => {
+const routes: FastifyPluginAsync = async (fastify, _options) => {
   // Register tool routes
   fastify.register(toolRoutes, { prefix: '/v1/tools' });
 
@@ -20,7 +20,7 @@ const routes: FastifyPluginAsync = async (fastify, options) => {
         },
       },
     },
-    handler: async (request, reply) => {
+    handler: async (_request, _reply) => {
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -50,7 +50,7 @@ const routes: FastifyPluginAsync = async (fastify, options) => {
         },
       },
     },
-    handler: async (request, reply) => {
+    handler: async (_request, _reply) => {
       // For now, return a static list of available tools
       return [
         {

@@ -8,7 +8,7 @@ declare module 'fastify' {
   }
 }
 
-const fastifyPlugin: FastifyPluginAsync = async (fastify, options) => {
+const fastifyPlugin: FastifyPluginAsync = async (fastify, _options) => {
   const orchestrator = new MasterOrchestrator({
     rabbitmq: {
       url: process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672',
@@ -24,7 +24,7 @@ const fastifyPlugin: FastifyPluginAsync = async (fastify, options) => {
   fastify.decorate('orchestrator', orchestrator);
 
   // Close connection when Fastify closes
-  fastify.addHook('onClose', async (instance) => {
+  fastify.addHook('onClose', async (_instance) => {
     // Add any cleanup logic when needed
   });
 };

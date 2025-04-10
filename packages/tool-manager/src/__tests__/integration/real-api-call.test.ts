@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify from 'fastify';
 import toolRoutes from '../../routes/tools.js';
-import axios from 'axios';
+// Import removed to fix linting error
 import { tools } from '../../tools/index.js';
 
 // This test makes real API calls to JSONPlaceholder

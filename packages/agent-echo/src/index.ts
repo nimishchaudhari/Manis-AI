@@ -1,7 +1,5 @@
 import { TaskAssignment } from '@acme/shared-mcp';
 import { 
-  RabbitMQConfig, 
-  ToolManagerConfig, 
   createLogger 
 } from '@acme/shared-utils';
 import { AgentService, AgentConfig } from '@acme/agent-template';
@@ -54,7 +52,7 @@ export class EchoAgent extends AgentService {
           echoResult: task.parameters,
           toolResult: toolResult
         };
-      } catch (error: any) {
+      } catch (error) {
         this.logger.error('Tool execution failed', error);
         throw error;
       }
@@ -71,7 +69,7 @@ export class EchoAgent extends AgentService {
 }
 
 // Example usage (for local testing)
-async function main() {
+async function main(): Promise<void> {
   const config: EchoAgentConfig = {
     rabbitmq: {
       url: process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672',
@@ -121,7 +119,12 @@ async function main() {
 
 // Auto-start the agent if this is the main script
 if (require.main === module) {
-  main().catch(console.error);
+  // Use a normal function call instead of console.error
+  main().catch((error) => {
+    const logger = createLogger('echo-agent-main');
+    logger.error('Unhandled error in main', error);
+    process.exit(1);
+  });
 }
 
 export default EchoAgent;

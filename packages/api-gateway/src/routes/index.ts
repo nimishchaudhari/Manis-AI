@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import jobRoutes from './jobs.js';
 
-const routes: FastifyPluginAsync = async (fastify, options) => {
+const routes: FastifyPluginAsync = async (fastify, _options) => {
   // Register job routes
   fastify.register(jobRoutes, { prefix: '/v1/jobs' });
 
@@ -20,7 +20,7 @@ const routes: FastifyPluginAsync = async (fastify, options) => {
         },
       },
     },
-    handler: async (request, reply) => {
+    handler: async (_request, _reply) => {
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),

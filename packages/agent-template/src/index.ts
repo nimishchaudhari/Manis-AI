@@ -1,4 +1,4 @@
-import amqplib, { Channel } from 'amqplib';
+import amqplib from 'amqplib';
 import { TaskAssignment, StatusUpdate, CoTLog } from '@acme/shared-mcp';
 import { 
   RabbitMQConfig, 
@@ -153,15 +153,16 @@ export abstract class AgentService implements IAgent {
           
           // Acknowledge message
           this.channel?.ack(msg);
-        } catch (error: any) {
-          this.logger.error(`Error processing message: ${error.message}`, error);
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Error processing message: ${errorMessage}`);
           
           // Send failure status update if we have task context
           if (this.currentJobId && this.currentTaskId) {
             await this.sendStatusUpdate({ 
               status: 'failed', 
-              message: `Error: ${error.message}`,
-              error: error.message
+              message: `Error: ${errorMessage}`,
+              error: errorMessage
             });
           }
           
@@ -210,23 +211,24 @@ export abstract class AgentService implements IAgent {
       });
       
       this.logger.info(`Task ${task.taskId} completed successfully`);
-    } catch (error: any) {
-      this.logger.error(`Error executing task ${task.taskId}: ${error.message}`, error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error executing task ${task.taskId}: ${errorMessage}`);
       
       // Log the error
       await this.sendCoTLog({
         step: 'task_failed',
         details: {
-          error: error.message,
-          stack: error.stack,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
         },
       });
       
       // Send failure status update
       await this.sendStatusUpdate({
         status: 'failed',
-        message: `Task execution failed: ${error.message}`,
-        error: error.message,
+        message: `Task execution failed: ${errorMessage}`,
+        error: errorMessage,
       });
       
       // Re-throw to propagate error up
@@ -268,13 +270,15 @@ export abstract class AgentService implements IAgent {
       });
       
       return toolResult;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
       // Log tool execution error
       await this.sendCoTLog({
         step: 'tool_execution_failed',
         details: {
           toolName,
-          error: error.message,
+          error: errorMessage,
         },
       });
       

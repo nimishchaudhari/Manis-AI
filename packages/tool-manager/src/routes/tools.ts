@@ -8,7 +8,7 @@ const toolExecutionSchema = z.object({
   params: z.record(z.unknown()),
 });
 
-const toolRoutes: FastifyPluginAsync = async (fastify, options) => {
+const toolRoutes: FastifyPluginAsync = async (fastify, _options) => {
   // Execute a specific tool
   fastify.post('/:toolName/execute', {
     schema: {

@@ -53,7 +53,12 @@ async function main() {
 
 // Auto-start the agent if this is the main script
 if (require.main === module) {
-  main().catch(console.error);
+  main().catch((error) => {
+    // Use logger instead of console
+    const logger = createLogger('web-search-agent-main');
+    logger.error('Unhandled error in main', error);
+    process.exit(1);
+  });
 }
 
 export { WebSearchAgent };

@@ -9,7 +9,7 @@ const goalSchema = z.object({
 // Type for goal submission
 type GoalSubmission = z.infer<typeof goalSchema>;
 
-const jobRoutes: FastifyPluginAsync = async (fastify, options) => {
+const jobRoutes: FastifyPluginAsync = async (fastify, _options) => {
   // POST /v1/jobs - Submit a new job
   fastify.post('/', {
     schema: {
