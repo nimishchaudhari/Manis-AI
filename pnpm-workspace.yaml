@@ -1,0 +1,3 @@
+packages:
+  # Define workspace packages
+  - 'packages/*'
