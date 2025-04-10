@@ -45,7 +45,7 @@ Internal service authentication is handled via API keys (to be implemented).
     ],
     securityDefinitions: {
       apiKey: {
-        type: 'apiKey',
+        type: 'apiKey' as 'apiKey',
         name: 'x-api-key',
         in: 'header',
         description: 'API key for authentication (to be implemented)',
@@ -60,7 +60,7 @@ Internal service authentication is handled via API keys (to be implemented).
 export const swaggerUiOptions = {
   routePrefix: '/documentation',
   uiConfig: {
-    docExpansion: 'list',
+    docExpansion: 'list' as 'list',
     deepLinking: true,
     persistAuthorization: true,
   },

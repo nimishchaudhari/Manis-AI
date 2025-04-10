@@ -56,7 +56,15 @@ const toolRoutes: FastifyPluginAsync = async (fastify, _options) => {
         fastify.log.info(`Executing tool: ${toolName}`);
         
         // Execute the tool
-        const result = await tools[toolName as ToolName](body.params);
+        // For mock_api, ensure the required endpoint parameter exists
+        if (toolName === 'mock_api' && !body.params.endpoint) {
+          return reply.status(400).send({
+            error: 'Invalid input',
+            details: 'The "endpoint" parameter is required for mock_api tool',
+          });
+        }
+        
+        const result = await tools[toolName as ToolName](body.params as any);
         
         fastify.log.info(`Tool ${toolName} executed successfully`);
         
