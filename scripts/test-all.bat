@@ -80,9 +80,18 @@ echo ✅ Job submitted successfully
 
 REM The next step is tricky in batch as we need to extract the jobId
 REM This is simplified and might need manual checking
-echo Testing job status...
-curl -s -X GET "http://localhost:3000/v1/jobs/test-job-id/status"
-echo ✅ Job status check passed (Simplified check - requires manual verification)
+REM Extract and validate job ID
+for /f "tokens=2 delims=:," %%i in ('echo %JOB_RESPONSE%') do set JOB_ID=%%i
+set JOB_ID=%JOB_ID:"=%
+set JOB_ID=%JOB_ID: =%
+
+echo 🔄 Testing job status for ID: %JOB_ID%...
+curl -s -X GET "http://localhost:3000/v1/jobs/%JOB_ID%/status" | findstr "completed" > NUL
+if %ERRORLEVEL% NEQ 0 (
+  echo ❌ Job did not reach completed state
+  goto cleanup
+)
+echo ✅ Job completed successfully
 
 REM Test Tool Manager execution
 echo Testing Tool Manager execution...

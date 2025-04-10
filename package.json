@@ -24,7 +24,9 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
+    "@types/node-fetch": "2",
     "axios": "^1.8.4",
+    "node-fetch": "2",
     "playwright": "^1.51.1"
   }
 }
