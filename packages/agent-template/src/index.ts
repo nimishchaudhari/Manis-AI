@@ -1,6 +1,13 @@
 import amqplib, { Channel } from 'amqplib';
 import { TaskAssignment, StatusUpdate, CoTLog } from '@acme/shared-mcp';
-import { RabbitMQConfig, RabbitMQClient, Logger, createLogger } from '@acme/shared-utils';
+import { 
+  RabbitMQConfig, 
+  RabbitMQClient, 
+  Logger, 
+  createLogger, 
+  ToolManagerClient,
+  ToolManagerConfig
+} from '@acme/shared-utils';
 
 export interface IAgent {
   /**
@@ -44,79 +51,280 @@ export interface IAgent {
   shutdown(): Promise<void>;
 }
 
+export interface AgentConfig {
+  rabbitmq: RabbitMQConfig;
+  toolManager?: ToolManagerConfig;
+}
+
 export abstract class AgentService implements IAgent {
-  protected config: RabbitMQConfig;
+  protected config: AgentConfig;
   protected logger: Logger;
   protected rabbitMQClient: RabbitMQClient;
+  protected toolManagerClient?: ToolManagerClient;
   protected channel: amqplib.Channel | null = null;
   protected agentId: string;
   protected taskQueue: string;
+  protected capabilities: string[];
+  
+  // Track current task context
+  protected currentJobId: string | null = null;
+  protected currentTaskId: string | null = null;
 
-  constructor(config: RabbitMQConfig, agentId: string, taskQueue: string) {
+  constructor(config: AgentConfig, agentId: string, taskQueue: string, capabilities: string[] = []) {
     this.config = config;
     this.logger = createLogger(`agent-${agentId}`);
-    this.rabbitMQClient = new RabbitMQClient(this.config, this.logger);
+    this.rabbitMQClient = new RabbitMQClient(this.config.rabbitmq, this.logger);
+    
+    // Initialize Tool Manager client if config is provided
+    if (config.toolManager) {
+      this.toolManagerClient = new ToolManagerClient(config.toolManager, this.logger);
+    }
+    
     this.agentId = agentId;
     this.taskQueue = taskQueue;
+    this.capabilities = capabilities;
   }
 
   async initialize(): Promise<void> {
     await this.rabbitMQClient.connect();
-    if (this.channel) {
-        this.channel = this.rabbitMQClient.getChannel();
-        await this.channel?.assertQueue(this.taskQueue, { durable: true });
+    this.channel = this.rabbitMQClient.getChannel();
+    
+    // Set up messaging infrastructure
+    await this.channel.assertExchange('tasks', 'direct', { durable: true });
+    await this.channel.assertExchange('status', 'direct', { durable: true });
+    await this.channel.assertExchange('logs', 'direct', { durable: true });
+    
+    // Create and bind task queue
+    await this.channel.assertQueue(this.taskQueue, { durable: true });
+    
+    // Each agent binds to its specific task type
+    for (const capability of this.capabilities) {
+      await this.channel.bindQueue(this.taskQueue, 'tasks', `task.${capability}`);
     }
-    this.logger.info(`Agent ${this.agentId} initialized and listening for tasks on queue: ${this.taskQueue}`);
+    
+    this.logger.info(`Agent ${this.agentId} initialized with capabilities: ${this.capabilities.join(', ')}`);
+    
+    // Register capabilities
+    await this.registerCapabilities();
+  }
+
+  async registerCapabilities(): Promise<void> {
+    if (!this.channel) {
+      throw new Error('Channel not initialized');
+    }
+    
+    const capabilityMessage = {
+      agentId: this.agentId,
+      capabilities: this.capabilities,
+      timestamp: new Date().toISOString(),
+    };
+    
+    this.channel.publish(
+      'capabilities', 
+      'agent.capabilities', 
+      Buffer.from(JSON.stringify(capabilityMessage))
+    );
+    
+    this.logger.info(`Registered capabilities: ${this.capabilities.join(', ')}`);
   }
 
   async start(): Promise<void> {
-    if (this.channel) {
-      this.channel.consume(this.taskQueue, async (msg: any) => {
-        if (msg) {
-          try {
-            const task: TaskAssignment = JSON.parse(msg.content.toString());
-            this.logger.info(`Received task: ${task.taskId} for job: ${task.jobId}`);
-            await this.handleTask(task);
-            this.channel?.ack(msg);
-          } catch (error: any) {
-            this.logger.error(`Error processing message: ${error.message}`, error);
-            this.channel?.nack(msg, false, false); // Reject and don't requeue
+    if (!this.channel) {
+      throw new Error('Channel not initialized');
+    }
+    
+    this.logger.info(`Starting to consume messages from queue: ${this.taskQueue}`);
+    
+    this.channel.consume(this.taskQueue, async (msg: amqplib.ConsumeMessage | null) => {
+      if (msg) {
+        try {
+          const task: TaskAssignment = JSON.parse(msg.content.toString());
+          this.logger.info(`Received task: ${task.taskId} for job: ${task.jobId}`);
+          
+          // Store current task context
+          this.currentJobId = task.jobId;
+          this.currentTaskId = task.taskId;
+          
+          // Send in-progress status update
+          await this.sendStatusUpdate({ status: 'in-progress' });
+          
+          // Handle task
+          await this.handleTask(task);
+          
+          // Acknowledge message
+          this.channel?.ack(msg);
+        } catch (error: any) {
+          this.logger.error(`Error processing message: ${error.message}`, error);
+          
+          // Send failure status update if we have task context
+          if (this.currentJobId && this.currentTaskId) {
+            await this.sendStatusUpdate({ 
+              status: 'failed', 
+              message: `Error: ${error.message}`,
+              error: error.message
+            });
           }
+          
+          // Negative acknowledge message (don't requeue to avoid infinite loop)
+          this.channel?.nack(msg, false, false);
+        } finally {
+          // Clear task context
+          this.currentJobId = null;
+          this.currentTaskId = null;
         }
-      }, { noAck: false });
+      }
+    }, { noAck: false });
+    
+    this.logger.info(`Agent ${this.agentId} started and is listening for tasks`);
+  }
+
+  async handleTask(task: TaskAssignment): Promise<void> {
+    try {
+      this.logger.info(`Handling task: ${task.taskId}, type: ${task.taskType}`);
+      
+      // Log the start of task execution
+      await this.sendCoTLog({
+        step: 'task_started',
+        details: {
+          taskType: task.taskType,
+          description: task.description,
+        },
+      });
+      
+      // Execute the task
+      const result = await this.executeTask(task);
+      
+      // Log the completion of task execution
+      await this.sendCoTLog({
+        step: 'task_completed',
+        details: {
+          taskType: task.taskType,
+          result: result,
+        },
+      });
+      
+      // Send successful status update
+      await this.sendStatusUpdate({
+        status: 'completed',
+        result: result,
+      });
+      
+      this.logger.info(`Task ${task.taskId} completed successfully`);
+    } catch (error: any) {
+      this.logger.error(`Error executing task ${task.taskId}: ${error.message}`, error);
+      
+      // Log the error
+      await this.sendCoTLog({
+        step: 'task_failed',
+        details: {
+          error: error.message,
+          stack: error.stack,
+        },
+      });
+      
+      // Send failure status update
+      await this.sendStatusUpdate({
+        status: 'failed',
+        message: `Task execution failed: ${error.message}`,
+        error: error.message,
+      });
+      
+      // Re-throw to propagate error up
+      throw error;
     }
   }
 
-  abstract handleTask(task: TaskAssignment): Promise<void>;
   abstract executeTask(task: TaskAssignment): Promise<unknown>;
 
+  /**
+   * Helper method to execute a tool via the Tool Manager
+   * @param toolName Name of the tool to execute
+   * @param params Parameters for the tool
+   */
+  async executeTool(toolName: string, params: Record<string, unknown>): Promise<unknown> {
+    if (!this.toolManagerClient) {
+      throw new Error('Tool Manager client not initialized');
+    }
+    
+    // Log tool execution
+    await this.sendCoTLog({
+      step: 'executing_tool',
+      details: {
+        toolName,
+        params,
+      },
+    });
+    
+    try {
+      const toolResult = await this.toolManagerClient.executeTool(toolName, params);
+      
+      // Log tool execution result
+      await this.sendCoTLog({
+        step: 'tool_execution_completed',
+        details: {
+          toolName,
+          result: toolResult,
+        },
+      });
+      
+      return toolResult;
+    } catch (error: any) {
+      // Log tool execution error
+      await this.sendCoTLog({
+        step: 'tool_execution_failed',
+        details: {
+          toolName,
+          error: error.message,
+        },
+      });
+      
+      throw error;
+    }
+  }
+
   async sendStatusUpdate(update: Omit<StatusUpdate, 'timestamp' | 'jobId' | 'taskId'> & Partial<Pick<StatusUpdate, 'error'>>): Promise<void> {
-    const jobId = 'test-job-id'; // Replace with actual jobId
-    const taskId = 'test-task-id'; // Replace with actual taskId
+    if (!this.currentJobId || !this.currentTaskId) {
+      throw new Error('No active task context for status update');
+    }
+    
     const statusUpdate: StatusUpdate = {
-      jobId,
-      taskId,
+      jobId: this.currentJobId,
+      taskId: this.currentTaskId,
       ...update,
       timestamp: new Date().toISOString(),
     };
+    
     const channel = this.rabbitMQClient.getChannel();
-    channel.publish('status', `agent.${this.agentId}.status`, Buffer.from(JSON.stringify(statusUpdate)));
-    this.logger.info(`Sent status update: ${statusUpdate.status} for task: ${taskId} job: ${jobId}`);
+    channel.publish(
+      'status', 
+      `agent.${this.agentId}.status`, 
+      Buffer.from(JSON.stringify(statusUpdate))
+    );
+    
+    this.logger.info(`Sent status update: ${statusUpdate.status} for task: ${this.currentTaskId}`);
   }
 
   async sendCoTLog(log: Omit<CoTLog, 'timestamp' | 'jobId' | 'taskId' | 'agentId'>): Promise<void> {
-    const jobId = 'test-job-id'; // Replace with actual jobId
-    const taskId = 'test-task-id'; // Replace with actual taskId
+    if (!this.currentJobId || !this.currentTaskId) {
+      throw new Error('No active task context for CoT log');
+    }
+    
     const coTLog: CoTLog = {
       agentId: this.agentId,
-      jobId,
-      taskId,
+      jobId: this.currentJobId,
+      taskId: this.currentTaskId,
       ...log,
       timestamp: new Date().toISOString(),
     };
+    
     const channel = this.rabbitMQClient.getChannel();
-    channel.publish('logs', `agent.${this.agentId}.logs`,  Buffer.from(JSON.stringify(coTLog)));
-    this.logger.info(`Sent CoT log for task: ${taskId} job: ${jobId}`);
+    channel.publish(
+      'logs', 
+      `agent.${this.agentId}.logs`, 
+      Buffer.from(JSON.stringify(coTLog))
+    );
+    
+    this.logger.debug(`Sent CoT log: ${log.step} for task: ${this.currentTaskId}`);
   }
 
   async shutdown(): Promise<void> {

@@ -1,171 +1,151 @@
 # Manis-Inspired Autonomous AI System
 
-A distributed multi-agent AI system implementing hierarchical orchestration and capability-based agent discovery using the Model Context Protocol (MCP).
+A distributed multi-agent AI system designed for complex goal-oriented task execution.
 
-## 🎯 Project Overview
+## Overview
 
-This project implements a sophisticated multi-agent AI system using Node.js, TypeScript, and pnpm workspaces in a monorepo structure. The system utilizes the Model Context Protocol (MCP) for inter-service communication via RabbitMQ, featuring:
+The Manis-Inspired AI System is a modular, distributed platform that leverages multiple specialized agents orchestrated to achieve complex user-defined goals. The system follows a hierarchical structure, breaking down high-level goals into manageable tasks assigned to specialized agents.
 
-- Hierarchical orchestration with master and sub-orchestrators
-- Capability-based agent discovery
-- RAG-based memory management
-- Secure tool integration with sandboxing
-- Comprehensive observability and logging
+## Key Features
 
-## 📊 Current Status
+- **Goal-Oriented Processing**: Submit high-level goals in natural language; the system autonomously plans and executes tasks to achieve them.
+- **Orchestration**: Master Orchestrator decomposes complex goals into directed task graphs using hybrid planning (LLM + structured methods).
+- **Agent Specialization**: Agents with specific capabilities (web search, code execution, data analysis) perform specialized tasks.
+- **Tool Integration**: Standardized Tool Manager allows agents to access external services and APIs.
+- **Memory & Context**: RAG-based memory system for historical context and knowledge retention.
+- **Observability**: Comprehensive logging, tracing, and monitoring throughout the system.
 
-The project is being developed in phases. Currently completed:
+## Architecture
 
-### ✅ Phase 1 - Foundation & Core Communication
-- Monorepo structure setup
-- Core shared packages implementation
-- RabbitMQ infrastructure setup
-- Base agent template
-- Echo agent implementation
+The system follows a layered architecture:
 
-### ✅ Phase 2 - Orchestration & Agent MVP
-- Master Orchestrator service implementation
-- HybridPlanner for goal decomposition
-- Web Search Agent with dual-mode capability
-- Comprehensive MCP integration
-- Enhanced build process using tsup
+1. **API & UI Layer**: User-facing interfaces for goal submission and status tracking
+2. **Orchestration Layer**: Goal decomposition, planning, and task assignment
+3. **Agent Subsystem**: Specialized agents for task execution
+4. **Tool Integration & Execution Layer**: Standardized access to external tools and services
+5. **Communication & Memory Layer**: Message bus and RAG-based memory system
+6. **Security, Monitoring & Feedback Layer**: Observability, human feedback, security controls
 
-For detailed progress and upcoming phases, see [WIP.md](WIP.md).
-
-## 🏗 Project Structure
-
-```
-/packages/
-    /api-gateway/       # API service for external interactions
-    /orchestrator-master/ # Master Orchestrator service
-    /orchestrator-sub/  # Template for Sub-Orchestrators
-    /agent-template/    # Base template for agents
-    /agent-echo/       # Example Echo Agent
-    /agent-websearch/   # Web Search Agent
-    /tool-manager/      # Tool management service
-    /rag-service/       # RAG service
-    /sandbox-service/   # Code execution sandbox
-    /shared-mcp/        # Shared MCP schemas & types
-    /shared-utils/      # Common utilities
-    /ui-dashboard/      # Frontend dashboard
-/docker/               # Dockerfiles
-/infra/               # K8s manifests, IaC
-```
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Node.js (Latest LTS)
-- pnpm
-- Docker and Docker Compose
-- Git
+- Node.js (v18+)
+- pnpm (v8+)
+- Docker and Docker Compose (for local development)
 
 ### Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/manis-ai.git
-cd manis-ai
-```
+   ```
+   git clone https://github.com/example/manis-ai.git
+   cd manis-ai
+   ```
 
 2. Install dependencies:
+   ```
+   pnpm install
+   ```
+
+3. Build the packages:
+   ```
+   pnpm build
+   ```
+
+4. Start the services:
+   ```
+   docker-compose up -d
+   ```
+
+### Development Setup
+
+The project is organized as a monorepo using pnpm workspaces. Key packages include:
+
+- **@acme/api-gateway**: API service (port 3000)
+- **@acme/orchestrator-master**: Master Orchestrator service
+- **@acme/agent-template**: Base template for agents
+- **@acme/agent-echo**: Simple echo agent for testing
+- **@acme/agent-websearch**: Web search agent
+- **@acme/tool-manager**: Tool management service (port 3002)
+- **@acme/shared-mcp**: Shared MCP schemas and types
+- **@acme/shared-utils**: Common utilities, logging config
+
+## Usage
+
+### Submitting a Goal
+
 ```bash
-pnpm install
+curl -X POST "http://localhost:3000/v1/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{"goal": "Analyze the impact of recent AI regulations on healthcare"}'
 ```
 
-3. Start RabbitMQ:
+### Checking Job Status
+
 ```bash
-docker-compose up -d
+curl -X GET "http://localhost:3000/v1/jobs/{jobId}/status"
 ```
 
-4. Configure environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+### API Documentation
 
-### Development
+- API Gateway Documentation: http://localhost:3000/documentation
+- Tool Manager Documentation: http://localhost:3002/documentation
 
-1. Build all packages:
-```bash
-pnpm run build
-```
+## Testing
 
-2. Start development mode:
-```bash
-pnpm run dev
-```
+Run tests with:
 
-3. Run tests:
 ```bash
 pnpm test
 ```
 
-## 🔧 Architecture
+For integration tests with real API calls:
 
-### Core Components
+```bash
+RUN_REAL_API_TESTS=true pnpm test
+```
 
-- **Model Context Protocol (MCP)**: Standardized communication protocol implemented via Zod schemas
-- **Master Orchestrator**: Handles goal decomposition and task assignment
-- **Agents**: Autonomous components that execute specific tasks
-- **Tool Manager**: Manages secure external tool execution
-- **RAG Service**: Handles memory and context management
+## Architecture Diagram
 
-### Communication Flow
+```
++-------------------+     +-------------------+
+|                   |     |                   |
+|    API Gateway    |     |    UI Dashboard   |
+|                   |     |                   |
++--------+----------+     +---------+---------+
+         |                          |
+         v                          v
++-------------------+     +-------------------+
+|                   |     |                   |
+| Master            |     | Status & Logs     |
+| Orchestrator      |<--->| Monitoring        |
+|                   |     |                   |
++--------+----------+     +---------+---------+
+         |                          ^
+         v                          |
++-------------------+               |
+|                   |               |
+| Message Bus       +--------------+
+| (RabbitMQ)        |
+|                   |
++--------+----------+
+         |
+         |
++--------v----------+     +-------------------+
+|                   |     |                   |
+| Agents            |<--->| Tool Manager      |
+| - Web Search      |     |                   |
+| - Code Execution  |     +-------------------+
+| - Data Analysis   |     |                   |
+|                   |<--->| RAG Service       |
++-------------------+     |                   |
+                          +-------------------+
+```
 
-1. External requests → API Gateway
-2. API Gateway → Master Orchestrator
-3. Master Orchestrator → Appropriate Agents
-4. Agents ↔ Tool Manager for external tool access
-5. All components ↔ RAG Service for context/memory
+## Contributing
 
-## 🛠 Technical Stack
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-- **Runtime**: Node.js
-- **Language**: TypeScript
-- **Package Management**: pnpm workspaces
-- **Message Bus**: RabbitMQ
-- **Logging**: Pino
-- **Testing**: Vitest/Jest
-- **Build**: tsup
-- **Containerization**: Docker
-- **Orchestration**: Kubernetes
-
-## 📝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-Please ensure your PR:
-- Follows the existing code style
-- Includes appropriate tests
-- Updates relevant documentation
-- Has a clear description of changes
-
-## 🔒 Security
-
-The system implements several security measures:
-- Secure sandboxing for code execution
-- Input validation using Zod schemas
-- Least privilege principle in Docker containers
-- Secrets management via environment variables
-
-## 📖 Documentation
-
-- [WIP.md](WIP.md) - Detailed progress and implementation details
-- [API Documentation](docs/api.md) - API endpoints and usage
-- [Architecture](docs/architecture.md) - Detailed system architecture
-- [Development Guide](docs/development.md) - Development workflow
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Acknowledgments
-
-- Inspired by the Manis architecture
-- Built with open-source technologies

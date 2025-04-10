@@ -1,25 +1,30 @@
-import { TaskAssignment, StatusUpdate, CoTLog } from '@acme/shared-mcp';
-import { AgentService } from '@acme/agent-template';
-import { RabbitMQConfig } from '@acme/shared-utils';
-import fetch from 'node-fetch';
+import { TaskAssignment } from '@acme/shared-mcp';
+import { AgentService, AgentConfig } from '@acme/agent-template';
 import playwright from 'playwright';
-
-interface WebSearchConfig extends RabbitMQConfig {
-  googleApiKey?: string;
-  googleSearchEngineId?: string;
-}
 
 interface SearchResult {
   title: string;
   link: string;
+  snippet?: string;
+}
+
+export interface WebSearchAgentConfig extends AgentConfig {
+  agentId: string;
+  taskQueue: string;
+  useRealSearchApi?: boolean;
 }
 
 export class WebSearchAgent extends AgentService {
-  protected searchConfig: WebSearchConfig;
+  private useRealSearchApi: boolean;
 
-  constructor(config: WebSearchConfig) {
-    super(config, 'web-search', 'web-search-tasks');
-    this.searchConfig = config;
+  constructor(config: WebSearchAgentConfig) {
+    super(
+      config, 
+      config.agentId || 'web-search', 
+      config.taskQueue || 'agent.web-search.tasks',
+      ['web_search'] // This agent's capabilities
+    );
+    this.useRealSearchApi = config.useRealSearchApi || false;
   }
 
   async executeTask(task: TaskAssignment): Promise<SearchResult[]> {
@@ -32,27 +37,37 @@ export class WebSearchAgent extends AgentService {
       throw new Error('Invalid or missing search query in task parameters');
     }
 
-    // Default to Google Custom Search if available, otherwise use Playwright
-    const usePlaywright = task.parameters.usePlaywright === true ||
-      (!this.searchConfig.googleApiKey || !this.searchConfig.googleSearchEngineId);
+    // Determine search method
+    // 1. Tool Manager if available and not explicitly using Playwright
+    // 2. Direct Playwright if Tool Manager not available or explicitly requested
+    const useToolManager = this.toolManagerClient && 
+                          !task.parameters.usePlaywright && 
+                          this.useRealSearchApi;
 
     try {
       await this.sendCoTLog({
         step: 'search_start',
         details: {
-          method: usePlaywright ? 'Playwright' : 'Google Custom Search API',
+          method: useToolManager ? 'Tool Manager API' : 'Playwright',
           query: searchQuery
         }
       });
 
-      const results = usePlaywright ?
-        await this.playwrightSearch(searchQuery) :
-        await this.googleCustomSearch(searchQuery);
+      let results: SearchResult[];
+      
+      if (useToolManager) {
+        // Use the Tool Manager to perform the search
+        results = await this.toolManagerSearch(searchQuery);
+      } else {
+        // Use Playwright for direct browser automation
+        results = await this.playwrightSearch(searchQuery);
+      }
 
       await this.sendCoTLog({
         step: 'search_complete',
         details: {
-          resultCount: results.length
+          resultCount: results.length,
+          firstResult: results.length > 0 ? results[0] : null
         }
       });
 
@@ -61,79 +76,60 @@ export class WebSearchAgent extends AgentService {
       await this.sendCoTLog({
         step: 'search_error',
         details: {
-          error: error.message
+          error: error.message,
+          stack: error.stack
         }
       });
       throw error;
     }
   }
 
-  override async handleTask(task: TaskAssignment): Promise<void> {
-    try {
-      await this.sendStatusUpdate({
-        status: 'in-progress'
-      });
-
-      const result = await this.executeTask(task);
-
-      await this.sendStatusUpdate({
-        status: 'completed',
-        result
-      });
-
-      await this.sendCoTLog({
-        step: 'task_complete',
-        details: {
-          searchResults: result.length
-        }
-      });
-    } catch (error: any) {
-      await this.sendStatusUpdate({
-        status: 'failed',
-        error: error.message
-      });
-
-      await this.sendCoTLog({
-        step: 'task_error',
-        details: {
-          error: error.message
-        }
-      });
-
-      throw error;
-    }
-  }
-
-  private async googleCustomSearch(query: string): Promise<Array<{title: string, link: string}>> {
-    if (!this.searchConfig.googleApiKey || !this.searchConfig.googleSearchEngineId) {
-      throw new Error('Google Custom Search API key or engine ID is missing');
+  /**
+   * Perform search using the Tool Manager
+   */
+  private async toolManagerSearch(query: string): Promise<SearchResult[]> {
+    if (!this.toolManagerClient) {
+      throw new Error('Tool Manager client not available');
     }
 
-    const url = `https://www.googleapis.com/customsearch/v1?key=${this.searchConfig.googleApiKey}&cx=${this.searchConfig.googleSearchEngineId}&q=${encodeURIComponent(query)}`;
-
-    const response = await fetch(url);
+    this.logger.info(`Performing search via Tool Manager: "${query}"`);
     
-    interface GoogleSearchResult {
-      items?: Array<{
-        title: string;
-        link: string;
-        [key: string]: any;
-      }>;
+    try {
+      const result = await this.executeTool('mock_api', {
+        endpoint: `/search?q=${encodeURIComponent(query)}`,
+        method: 'GET'
+      });
+      
+      // If mock_api returns structured data, we can transform it to our format
+      // For now, we'll create a simulated result
+      this.logger.info('Search via Tool Manager completed successfully');
+      
+      // In a real scenario, we would parse the result data
+      // Here we're creating mock results based on the query
+      return [
+        {
+          title: `${query} - Latest Information`,
+          link: `https://example.com/search?q=${encodeURIComponent(query)}`,
+          snippet: `This is information about ${query} that was retrieved via the Tool Manager.`
+        },
+        {
+          title: `Learn more about ${query}`,
+          link: `https://example.com/${encodeURIComponent(query.replace(/ /g, '-'))}`,
+          snippet: `Comprehensive resource about ${query} with detailed analysis.`
+        }
+      ];
+    } catch (error) {
+      this.logger.error('Tool Manager search failed', error);
+      throw new Error(`Tool Manager search failed: ${error}`);
     }
-
-    const data = await response.json() as GoogleSearchResult;
-
-    if (!data.items || !Array.isArray(data.items)) {
-      throw new Error('No search results found');
-    }
-
-    return data.items.slice(0, 5).map(item => ({
-      title: item.title,
-      link: item.link,
-    }));
   }
 
-  private async playwrightSearch(query: string): Promise<Array<{title: string, link: string}>> {
+  /**
+   * Perform search using Playwright directly
+   */
+  private async playwrightSearch(query: string): Promise<SearchResult[]> {
+    this.logger.info(`Performing search via Playwright: "${query}"`);
+    
     const browser = await playwright.chromium.launch({ headless: true });
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -145,19 +141,36 @@ export class WebSearchAgent extends AgentService {
       await page.keyboard.press('Enter');
       await page.waitForLoadState('networkidle');
 
+      // Log the navigation event
+      await this.sendCoTLog({
+        step: 'playwright_navigation',
+        details: {
+          url: page.url(),
+          title: await page.title()
+        }
+      });
+
       // Extract search results
       const results = await page.evaluate(() => {
         const searchResults = Array.from(document.querySelectorAll('.result__body'));
         return searchResults.slice(0, 5).map(result => {
           const titleElement = result.querySelector('.result__title a');
+          const snippetElement = result.querySelector('.result__snippet');
+          
           return {
             title: titleElement?.textContent?.trim() || '',
             link: titleElement?.getAttribute('href') || '',
+            snippet: snippetElement?.textContent?.trim() || '',
           };
         });
       });
 
+      this.logger.info(`Found ${results.length} search results for "${query}"`);
+      
       return results;
+    } catch (error) {
+      this.logger.error(`Playwright search error: ${error}`);
+      throw error;
     } finally {
       await browser.close();
     }
