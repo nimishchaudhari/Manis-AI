@@ -28,7 +28,7 @@ type Logger = pino.Logger;
  */
 declare class ManisError extends Error {
     readonly code: string;
-    constructor(message: string, code: string, cause?: Error);
+    constructor(message: string, code: string, _cause?: Error);
 }
 /**
  * Error thrown when a task fails to execute
@@ -94,6 +94,17 @@ declare class CapabilityError extends ManisError {
     constructor(message: string, requiredCapability: string);
 }
 
+/**
+ * Simple retry function for promise-returning operations
+ * @param fn Function to retry
+ * @param options Retry options
+ * @returns Result of the function
+ */
+declare function retry<T>(fn: () => Promise<T>, options?: {
+    maxRetries?: number;
+    initialDelayMs?: number;
+    maxDelayMs?: number;
+}): Promise<T>;
 interface RetryOptions {
     /** Maximum number of retry attempts */
     maxAttempts?: number;
@@ -154,4 +165,61 @@ declare class RabbitMQClient {
     close(): Promise<void>;
 }
 
-export { CapabilityError, CircuitBreaker, CommunicationError, type LogContext, type Logger, ManisError, MemoryError, NotFoundError, RabbitMQClient, type RabbitMQConfig, type RetryOptions, TaskExecutionError, TimeoutError, ToolExecutionError, ValidationError, addLogContext, createJobLogger, createLogger, makeRetryable, withRetry };
+/**
+ * Configuration for the Tool Manager client
+ */
+interface ToolManagerConfig {
+    baseUrl: string;
+    timeoutMs?: number;
+    retryOptions?: {
+        maxRetries: number;
+        initialDelayMs: number;
+        maxDelayMs: number;
+    };
+}
+/**
+ * Parameter type for tool execution
+ */
+type ToolParams = Record<string, unknown>;
+/**
+ * Tool execution result
+ */
+interface ToolResult {
+    result: unknown;
+}
+/**
+ * Client for interacting with the Tool Manager service
+ */
+declare class ToolManagerClient {
+    private axiosInstance;
+    private logger;
+    private retryOptions;
+    /**
+     * Create a new Tool Manager client
+     * @param config Tool Manager configuration
+     * @param logger Logger instance
+     */
+    constructor(config: ToolManagerConfig, logger: Logger);
+    /**
+     * List all available tools
+     * @returns List of available tools
+     */
+    listTools(): Promise<any[]>;
+    /**
+     * Execute a specific tool
+     * @param toolName Name of the tool to execute
+     * @param params Parameters for the tool
+     * @returns Result of the tool execution
+     */
+    executeTool(toolName: string, params: ToolParams): Promise<ToolResult>;
+    /**
+     * Check the health of the Tool Manager service
+     * @returns Health status
+     */
+    checkHealth(): Promise<{
+        status: string;
+        timestamp: string;
+    }>;
+}
+
+export { CapabilityError, CircuitBreaker, CommunicationError, type LogContext, type Logger, ManisError, MemoryError, NotFoundError, RabbitMQClient, type RabbitMQConfig, type RetryOptions, TaskExecutionError, TimeoutError, ToolExecutionError, ToolManagerClient, type ToolManagerConfig, type ToolParams, type ToolResult, ValidationError, addLogContext, createJobLogger, createLogger, makeRetryable, retry, withRetry };

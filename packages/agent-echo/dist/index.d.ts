@@ -1,16 +1,12 @@
 import { TaskAssignment } from '@acme/shared-mcp';
-import { RabbitMQConfig } from '@acme/shared-utils';
-import { AgentService } from '@acme/agent-template';
-
-interface EchoAgentConfig {
-    rabbitmq: RabbitMQConfig;
+import { AgentService, AgentConfig } from '@acme/agent-template';
+interface EchoAgentConfig extends AgentConfig {
     agentId: string;
     taskQueue: string;
 }
-declare class EchoAgent extends AgentService {
+export declare class EchoAgent extends AgentService {
     constructor(config: EchoAgentConfig);
-    handleTask(task: TaskAssignment): Promise<void>;
     executeTask(task: TaskAssignment): Promise<unknown>;
 }
-
-export { EchoAgent };
+export default EchoAgent;
+//# sourceMappingURL=index.d.ts.map
