@@ -89,6 +89,10 @@ export abstract class AgentService implements IAgent {
     await this.rabbitMQClient.connect();
     this.channel = this.rabbitMQClient.getChannel();
     
+    if (!this.channel) {
+      throw new Error('Failed to get channel from RabbitMQ client');
+    }
+    
     // Set up messaging infrastructure
     await this.channel.assertExchange('tasks', 'direct', { durable: true });
     await this.channel.assertExchange('status', 'direct', { durable: true });
@@ -135,7 +139,10 @@ export abstract class AgentService implements IAgent {
     
     this.logger.info(`Starting to consume messages from queue: ${this.taskQueue}`);
     
-    this.channel.consume(this.taskQueue, async (msg: amqplib.ConsumeMessage | null) => {
+    // Using 'channel' directly from scope since we've already checked it's not null
+    const channel = this.channel;
+    
+    channel.consume(this.taskQueue, async (msg: amqplib.ConsumeMessage | null) => {
       if (msg) {
         try {
           const task: TaskAssignment = JSON.parse(msg.content.toString());
@@ -152,7 +159,9 @@ export abstract class AgentService implements IAgent {
           await this.handleTask(task);
           
           // Acknowledge message
-          this.channel?.ack(msg);
+          if (channel) {
+            channel.ack(msg);
+          }
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           this.logger.error(`Error processing message: ${errorMessage}`);
@@ -167,7 +176,9 @@ export abstract class AgentService implements IAgent {
           }
           
           // Negative acknowledge message (don't requeue to avoid infinite loop)
-          this.channel?.nack(msg, false, false);
+          if (channel) {
+            channel.nack(msg, false, false);
+          }
         } finally {
           // Clear task context
           this.currentJobId = null;
@@ -299,6 +310,9 @@ export abstract class AgentService implements IAgent {
     };
     
     const channel = this.rabbitMQClient.getChannel();
+    if (!channel) {
+      throw new Error('Channel not available for status update');
+    }
     channel.publish(
       'status', 
       `agent.${this.agentId}.status`, 
@@ -322,6 +336,9 @@ export abstract class AgentService implements IAgent {
     };
     
     const channel = this.rabbitMQClient.getChannel();
+    if (!channel) {
+      throw new Error('Channel not available for CoT log');
+    }
     channel.publish(
       'logs', 
       `agent.${this.agentId}.logs`, 

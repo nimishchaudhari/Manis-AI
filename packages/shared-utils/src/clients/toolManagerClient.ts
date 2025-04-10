@@ -65,7 +65,11 @@ export class ToolManagerClient {
     try {
       const response = await retry(
         () => this.axiosInstance.get('/v1/tools'),
-        this.retryOptions
+        {
+          maxRetries: this.retryOptions?.maxRetries,
+          initialDelayMs: this.retryOptions?.initialDelayMs,
+          maxDelayMs: this.retryOptions?.maxDelayMs
+        }
       );
       return response.data;
     } catch (error) {
@@ -86,7 +90,11 @@ export class ToolManagerClient {
       
       const response = await retry(
         () => this.axiosInstance.post(`/v1/tools/${toolName}/execute`, { params }),
-        this.retryOptions
+        {
+          maxRetries: this.retryOptions?.maxRetries,
+          initialDelayMs: this.retryOptions?.initialDelayMs,
+          maxDelayMs: this.retryOptions?.maxDelayMs
+        }
       );
       
       this.logger.info(`Tool ${toolName} executed successfully`);
