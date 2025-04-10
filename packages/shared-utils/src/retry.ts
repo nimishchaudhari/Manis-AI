@@ -1,5 +1,43 @@
 import { TimeoutError } from './errors.js';
 
+/**
+ * Simple retry function for promise-returning operations
+ * @param fn Function to retry
+ * @param options Retry options
+ * @returns Result of the function
+ */
+export async function retry<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    initialDelayMs?: number;
+    maxDelayMs?: number;
+  } = {}
+): Promise<T> {
+  const maxRetries = options.maxRetries ?? 3;
+  const initialDelayMs = options.initialDelayMs ?? 1000;
+  const maxDelayMs = options.maxDelayMs ?? 5000;
+
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      
+      if (attempt === maxRetries - 1) {
+        break;
+      }
+
+      const delay = Math.min(initialDelayMs * Math.pow(2, attempt), maxDelayMs);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 export interface RetryOptions {
   /** Maximum number of retry attempts */
   maxAttempts?: number;

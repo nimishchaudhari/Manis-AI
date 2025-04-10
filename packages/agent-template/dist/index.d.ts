@@ -1,8 +1,7 @@
 import amqplib from 'amqplib';
 import { TaskAssignment, StatusUpdate, CoTLog } from '@acme/shared-mcp';
-import { RabbitMQConfig, Logger, RabbitMQClient } from '@acme/shared-utils';
-
-interface IAgent {
+import { RabbitMQConfig, RabbitMQClient, Logger, ToolManagerClient, ToolManagerConfig } from '@acme/shared-utils';
+export interface IAgent {
     /**
      * Initializes the agent, connects to message bus, registers capabilities.
      */
@@ -37,21 +36,35 @@ interface IAgent {
      */
     shutdown(): Promise<void>;
 }
-declare abstract class AgentService implements IAgent {
-    protected config: RabbitMQConfig;
+export interface AgentConfig {
+    rabbitmq: RabbitMQConfig;
+    toolManager?: ToolManagerConfig;
+}
+export declare abstract class AgentService implements IAgent {
+    protected config: AgentConfig;
     protected logger: Logger;
     protected rabbitMQClient: RabbitMQClient;
+    protected toolManagerClient?: ToolManagerClient;
     protected channel: amqplib.Channel | null;
     protected agentId: string;
     protected taskQueue: string;
-    constructor(config: RabbitMQConfig, agentId: string, taskQueue: string);
+    protected capabilities: string[];
+    protected currentJobId: string | null;
+    protected currentTaskId: string | null;
+    constructor(config: AgentConfig, agentId: string, taskQueue: string, capabilities?: string[]);
     initialize(): Promise<void>;
+    registerCapabilities(): Promise<void>;
     start(): Promise<void>;
-    abstract handleTask(task: TaskAssignment): Promise<void>;
+    handleTask(task: TaskAssignment): Promise<void>;
     abstract executeTask(task: TaskAssignment): Promise<unknown>;
+    /**
+     * Helper method to execute a tool via the Tool Manager
+     * @param toolName Name of the tool to execute
+     * @param params Parameters for the tool
+     */
+    executeTool(toolName: string, params: Record<string, unknown>): Promise<unknown>;
     sendStatusUpdate(update: Omit<StatusUpdate, 'timestamp' | 'jobId' | 'taskId'> & Partial<Pick<StatusUpdate, 'error'>>): Promise<void>;
     sendCoTLog(log: Omit<CoTLog, 'timestamp' | 'jobId' | 'taskId' | 'agentId'>): Promise<void>;
     shutdown(): Promise<void>;
 }
-
-export { AgentService, type IAgent };
+//# sourceMappingURL=index.d.ts.map

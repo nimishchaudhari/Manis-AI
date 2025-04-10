@@ -9,3 +9,29 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./packages/api-gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - LLM_SERVICE_URL=http://localhost:3001
+      - PLANNING_TIMEOUT=30000
+    depends_on:
+      - rabbitmq
+
+  tool-manager:
+    build:
+      context: .
+      dockerfile: ./packages/tool-manager/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - HOST=0.0.0.0
+      - MOCK_API_BASE_URL=https://jsonplaceholder.typicode.com

@@ -1,22 +1,20 @@
 {
   "name": "@acme/agent-websearch",
   "version": "1.0.0",
-  "description": "Web Search Agent for the Manis-Inspired AI System",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "start": "node dist/index.js"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts"
   },
   "dependencies": {
     "@acme/agent-template": "workspace:*",
     "@acme/shared-mcp": "workspace:*",
     "@acme/shared-utils": "workspace:*",
-    "@types/node-fetch": "^2.6.12",
-    "node-fetch": "^3.3.2",
     "playwright": "^1.51.1"
   },
   "devDependencies": {
-    "@types/node": "^20.11.25",
-    "typescript": "^5.3.3"
+    "vitest": "^1.6.1"
   }
 }

@@ -21,17 +21,17 @@ The primary goal is to develop the system according to the specifications outlin
 
 The project follows a monorepo structure with the following packages:
 
-*   **/api-gateway**: (To be implemented) API service for external interactions.
-*   **/orchestrator-master**: (To be implemented) Master Orchestrator service responsible for goal decomposition and task assignment.
+*   **/api-gateway**: API service for external interactions, handles job submission and status tracking.
+*   **/orchestrator-master**: Master Orchestrator service responsible for goal decomposition and task assignment.
 *   **/orchestrator-sub**: (To be implemented) Template/Example for Sub-Orchestrators.
 *   **/agent-template**: Base template for agents, defining the core `IAgent` interface.
 *   **/agent-echo**: A simple "Echo Agent" that echoes back the input parameters as its result. This serves as a basic example agent.
-*   **/agent-websearch**: (To be implemented) Example Web Search Agent using Playwright or Puppeteer.
-*   **/tool-manager**: (To be implemented) Tool management service for secure external tool execution.
+*   **/agent-websearch**: Web Search Agent using Playwright and/or the Tool Manager for web-based research.
+*   **/tool-manager**: Tool management service for secure external tool execution with circuit breaker patterns.
 *   **/rag-service**: (To be implemented) RAG (Retrieval-Augmented Generation) service for intelligent memory and context management.
 *   **/sandbox-service**: (To be implemented) Code execution sandbox service for secure code execution by agents.
 *   **/shared-mcp**: Shared MCP schemas (Zod) & types for inter-service communication.
-*   **/shared-utils**: Common utilities, logging configuration (Pino), and custom error classes.
+*   **/shared-utils**: Common utilities, logging configuration (Pino), custom error classes, and client libraries.
 *   **/ui-dashboard**: (To be implemented) Optional frontend dashboard for monitoring and interacting with the system.
 
 ## Progress
@@ -70,13 +70,30 @@ The project is being developed iteratively, following a phased approach.
     *   Implemented proper error handling, logging, and TypeScript type safety throughout
     *   Updated build process to use tsup for all packages, improving consistency and performance
 
-### Phase 3: API & Tooling MVP (To Do)
+### Phase 3: API & Tooling MVP (Completed)
 
 *   **Goal**: Implement the API Gateway and Tool Manager service.
-*   **Tasks**:
-    *   Implement the API Gateway (@acme/api-gateway) using Fastify. Include the POST /v1/jobs endpoint (with Zod validation) to trigger the Master Orchestrator and a basic GET /v1/jobs/{jobId}/status endpoint.
-    *   Implement the Tool Manager service (@acme/tool-manager) with a basic API structure.
-    *   Implement one simple tool wrapper (e.g., a mock external API) with basic error handling.
+*   **Tasks Completed**:
+    *   Implemented the API Gateway (@acme/api-gateway) using Fastify with:
+        * POST /v1/jobs endpoint with Zod validation to trigger the Master Orchestrator
+        * GET /v1/jobs/{jobId}/status endpoint for job status tracking
+        * Comprehensive error handling and logging
+        * OpenAPI/Swagger documentation
+    *   Implemented the Tool Manager service (@acme/tool-manager) with:
+        * Standardized API for tool execution
+        * Basic tool registry
+        * Circuit breaker pattern using Opossum for resilience
+        * OpenAPI/Swagger documentation
+    *   Implemented a mock API tool wrapper with:
+        * Support for GET and POST requests
+        * Error handling and retries
+        * Structured response parsing
+    *   Enhanced the Agent Template to support Tool Manager integration
+    *   Created a Tool Manager client in shared-utils for agent use
+    *   Updated the Echo Agent and Web Search Agent to use the Tool Manager
+    *   Added integration tests for API Gateway and Tool Manager
+    *   Set up GitHub Actions for CI/CD with comprehensive testing
+    *   Created Docker and Kubernetes deployment files
 
 ### Phase 4: Memory MVP (To Do)
 
@@ -85,6 +102,9 @@ The project is being developed iteratively, following a phased approach.
     *   Set up the RAG Service (@acme/rag-service) structure.
     *   Integrate a Vector Database client and implement basic connection logic.
     *   Implement a placeholder retrieval endpoint.
+    *   Create a RAG client in shared-utils for agent/orchestrator use.
+    *   Update agents to query RAG service for relevant context.
+    *   Implement basic memory ingestion flow for storing agent results.
 
 ### Phase 5: Enhancements & Integration (To Do)
 
@@ -112,9 +132,12 @@ The project is being developed iteratively, following a phased approach.
 
 *   **Model Context Protocol (MCP)**: All inter-service communication uses MCP, with Zod schemas defined in `@acme/shared-mcp` for validation.
 *   **RabbitMQ**: Used as the message bus for asynchronous communication between services.
+*   **Fastify**: Used for RESTful API services with OpenAPI/Swagger documentation.
+*   **Circuit Breaker Pattern**: Implemented in the Tool Manager for resilient external tool execution.
 *   **Pino**: Used for structured logging with context propagation (trace IDs, job IDs, etc.).
 *   **TypeScript**: Used for type safety and maintainability.
 *   **pnpm workspaces**: Used to manage the monorepo structure.
+*   **GitHub Actions**: Used for CI/CD automation, including testing, building, and deployment.
 
 ## Configuration
 
@@ -126,20 +149,41 @@ Asynchronous patterns (async/await) are used effectively, especially around I/O 
 
 ## Recent Changes and Project Feasibility
 
-The completion of Phase 2 marks a significant milestone in the project. Key changes and improvements include:
+The completion of Phase 3 marks a significant milestone in the project. Key changes and improvements include:
 
-1. Successful implementation of the Master Orchestrator, HybridPlanner, and WebSearchAgent.
-2. Enhanced error handling, logging, and type safety across all components.
-3. Standardization of the build process using tsup for all packages.
-4. Thorough integration of the Model Context Protocol (MCP) for inter-service communication.
+1. Implementation of the API Gateway for external interaction with the system.
+2. Development of the Tool Manager service with circuit breaker patterns for resilient external tool execution.
+3. Integration of agents with the Tool Manager for standardized access to external tools.
+4. Enhanced documentation with OpenAPI/Swagger specifications.
+5. Comprehensive CI/CD setup with GitHub Actions for automated testing and deployment.
 
-These developments have strengthened the foundation of the system and demonstrated the feasibility of the overall architecture. The successful integration of complex components like the HybridPlanner and the dual-mode WebSearchAgent (using both Google Custom Search API and Playwright) showcases the system's flexibility and potential for handling diverse tasks.
+These developments have further strengthened the foundation of the system and demonstrated the feasibility of the overall architecture. The successful integration of the API Gateway, Tool Manager, and the enhanced agents showcases the system's flexibility and potential for handling diverse tasks.
 
-Moving forward, the project remains feasible and on track. The completed phases have validated key architectural decisions and set a solid groundwork for upcoming phases. The next steps, including the implementation of the API Gateway, Tool Manager, and RAG Service, can build upon this established foundation.
+Moving forward, the project remains feasible and on track. The completed phases have validated key architectural decisions and set a solid groundwork for upcoming phases. The next step, including the implementation of the RAG Service, can build upon this established foundation.
 
 Potential challenges to consider for upcoming phases:
-1. Ensuring scalability of the orchestration system as more complex agents are added.
-2. Managing potential latency issues in distributed task execution.
-3. Implementing robust security measures, especially for the Secure Execution Sandbox.
+1. Ensuring efficient vector database integration for the RAG Service.
+2. Managing memory and retrieval latency in the RAG Service.
+3. Implementing effective context propagation between agents and the RAG Service.
 
 These challenges are manageable within the current project structure and will be addressed in the upcoming phases.
+
+## Testing
+
+A comprehensive testing strategy has been implemented:
+
+1. **Unit Tests**: Testing individual components with mocked dependencies.
+2. **Integration Tests**: Testing interactions between services.
+3. **CI/CD Tests**: Automated testing via GitHub Actions.
+
+Test scripts are available in the `/scripts` directory to validate system functionality.
+
+## Next Steps
+
+The immediate next step is to begin Phase 4: Memory MVP, which will focus on implementing the RAG Service for memory capabilities. This will involve:
+
+1. Setting up the RAG Service structure.
+2. Integrating a Vector Database client.
+3. Implementing retrieval and ingestion endpoints.
+4. Creating a RAG client for agent/orchestrator use.
+5. Updating agents to leverage the RAG service for context-aware operations.

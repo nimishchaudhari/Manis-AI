@@ -1,41 +1,19 @@
 {
   "name": "@acme/agent-echo",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "version": "1.0.0",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsup src/index.ts",
-    "dev": "tsup src/index.ts --watch",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts"
   },
   "dependencies": {
-    "@acme/shared-mcp": "workspace:*",
-    "@acme/shared-utils": "workspace:*",
     "@acme/agent-template": "workspace:*",
-    "amqplib": "^0.10.0"
+    "@acme/shared-mcp": "workspace:*",
+    "@acme/shared-utils": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "eslint": "^8.0.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.0.0",
-    "vitest": "^1.0.0"
-  },
-  "tsup": {
-    "entry": ["src/index.ts"],
-    "format": ["esm", "cjs"],
-    "dts": true,
-    "splitting": false,
-    "sourcemap": true,
-    "clean": true,
-    "target": "es2022"
+    "vitest": "^1.6.1"
   }
 }

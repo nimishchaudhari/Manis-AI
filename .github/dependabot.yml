@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    # Look for package.json and package-lock.json files in the root directory
+    directory: "/"
+    # Check for updates once a week
+    schedule:
+      interval: "weekly"
+    # Set maximum number of open pull requests
+    open-pull-requests-limit: 10
+    # Use semantic versioning
+    versioning-strategy: auto
+    # Groups specific dependencies
+    groups:
+      fastify:
+        patterns:
+          - "fastify*"
+          - "@fastify/*"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+          - "ts-*"
+      testing:
+        patterns:
+          - "vitest"
+          - "jest"
+          - "@testing-library/*"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/packages/api-gateway"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    
+  - package-ecosystem: "docker"
+    directory: "/packages/tool-manager"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

@@ -5,7 +5,7 @@ export class ManisError extends Error {
   constructor(
     message: string, 
     public readonly code: string,
-    cause?: Error
+    _cause?: Error  // Use underscore prefix to indicate unused param
   ) {
     super(message);
     this.name = this.constructor.name;
