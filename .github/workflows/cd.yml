@@ -15,7 +15,7 @@ jobs:
         service: [api-gateway, tool-manager]
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -57,7 +57,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       # This is a placeholder for actual deployment steps
       # In a real-world scenario, you would:
