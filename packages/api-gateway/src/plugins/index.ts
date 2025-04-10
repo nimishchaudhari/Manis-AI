@@ -1,6 +1,42 @@
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
-import MasterOrchestrator from '@acme/orchestrator-master';
+// Using a mock MasterOrchestrator until it's fully implemented
+// import MasterOrchestrator from '@acme/orchestrator-master';
+
+// Mock MasterOrchestrator
+class MasterOrchestrator {
+  constructor(config: any) {
+    this.config = config;
+  }
+
+  private config: any;
+
+  async connect(): Promise<void> {
+    console.log('Mock MasterOrchestrator connected');
+  }
+
+  async processUserGoal(goal: string): Promise<string> {
+    // In a real implementation, this would create a job and return a job ID
+    return `mock-job-${Date.now()}`; 
+  }
+  
+  async getJobStatus(jobId: string): Promise<any> {
+    // Mock job status
+    return {
+      jobId,
+      goal: "Mock goal for testing",
+      status: "in-progress",
+      timestamp: new Date().toISOString(),
+      tasks: [
+        {
+          taskId: "mock-task-1",
+          status: "completed",
+          timestamp: new Date().toISOString(),
+        }
+      ]
+    };
+  }
+}
 
 declare module 'fastify' {
   interface FastifyInstance {

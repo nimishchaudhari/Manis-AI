@@ -5,7 +5,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { createLogger } from '@acme/shared-utils';
 import routes from './routes/index.js';
-import { fastifyPlugin } from './plugins/index.js';
+import fastifyPlugin from './plugins/index.js';
 import { swaggerOptions, swaggerUiOptions } from './swagger.js';
 
 const logger = createLogger('api-gateway');
