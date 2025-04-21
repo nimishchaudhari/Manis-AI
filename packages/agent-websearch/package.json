@@ -12,7 +12,7 @@
     "@acme/agent-template": "workspace:*",
     "@acme/shared-mcp": "workspace:*",
     "@acme/shared-utils": "workspace:*",
-    "playwright": "^1.51.1"
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "vitest": "^1.6.1"
