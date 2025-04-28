@@ -17,7 +17,7 @@
     "@fastify/cors": "^8.5.0",
     "@fastify/swagger": "^8.13.0",
     "@fastify/swagger-ui": "^2.1.0",
-    "axios": "^1.8.4",
+    "axios": "^1.9.0",
     "dotenv": "^16.3.1",
     "fastify": "^4.26.0",
     "opossum": "^7.1.0",
