@@ -1,4 +1,4 @@
-FROM node:18-slim AS base
+FROM node:24-slim AS base
 
 # Install pnpm globally
 RUN npm install -g pnpm
