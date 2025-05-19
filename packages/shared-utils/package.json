@@ -26,7 +26,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "pino": "^9.2.0",
+    "pino": "^9.7.0",
     "amqplib": "^0.10.3"
   },
   "devDependencies": {
