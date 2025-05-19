@@ -33,7 +33,7 @@
     "@types/node": "^20.14.10",
     "pino-pretty": "^11.2.1",
     "rimraf": "^5.0.7",
-    "tsup": "^8.1.0",
+    "tsup": "^8.5.0",
     "typescript": "^5.5.3",
     "vitest": "^1.6.0",
      "@types/amqplib": "^0.8.2"
