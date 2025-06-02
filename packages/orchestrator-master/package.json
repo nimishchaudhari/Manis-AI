@@ -17,7 +17,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/amqplib": "^0.10.3",
+    "@types/amqplib": "^0.10.7",
     "@types/uuid": "^9.0.6",
     "vitest": "^1.6.1",
     "eslint": "^8.56.0",
